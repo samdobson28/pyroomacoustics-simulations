@@ -1,0 +1,36 @@
+{
+  "description": "Config 5: Long corridor [15, 4, 3] with 3 mics, RT60 0.7, high-quality mic model, and a music noise source.",
+  "room": {
+    "dimensions": [15, 4, 3],
+    "rt60": 0.7,
+    "ir_file": null
+  },
+  "microphone_positions": [
+    [12, 2, 1.5],
+    [12, 2.5, 1.5],
+    [12, 3, 1.5]
+  ],
+  "sources": {
+    "speech": {
+      "description": "Speech source at the corridor entrance.",
+      "position": [2, 2, 1.5],
+      "signal_file": "samples/speech.wav",
+      "delay": 0.4
+    },
+    "noise": [
+      {
+        "description": "Music noise source.",
+        "type": "music",
+        "position": [8, 3.5, 1.5],
+        "signal_file": "samples/music.wav",
+        "amplitude": 0.8
+      }
+    ]
+  },
+  "microphone_model": {
+    "description": "High-quality mic model with low-pass filtering.",
+    "frequency_response": "mic_models/high_quality_response.txt",
+    "sampling_rate": 16000,
+    "noise_floor": -85
+  }
+}

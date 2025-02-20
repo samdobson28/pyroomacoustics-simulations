@@ -1,0 +1,44 @@
+{
+  "description": "Config 7: L-shaped room [12, 10, 3] with 5 mics, RT60 0.65, high-quality mic model, with mixed noise sources.",
+  "room": {
+    "dimensions": [12, 10, 3],
+    "rt60": 0.65,
+    "ir_file": null
+  },
+  "microphone_positions": [
+    [8, 5, 1.5],
+    [8, 5.5, 1.5],
+    [8, 6, 1.5],
+    [8, 6.5, 1.5],
+    [8, 7, 1.5]
+  ],
+  "sources": {
+    "speech": {
+      "description": "Speech source in the lower left section.",
+      "position": [3, 3, 1.5],
+      "signal_file": "samples/speech.wav",
+      "delay": 0.25
+    },
+    "noise": [
+      {
+        "description": "Music noise source.",
+        "type": "music",
+        "position": [5, 8, 1.5],
+        "signal_file": "samples/music.wav",
+        "amplitude": 0.7
+      },
+      {
+        "description": "Gaussian noise source.",
+        "type": "gaussian",
+        "position": [10, 2, 1.5],
+        "amplitude": 0.2
+      }
+    ]
+  },
+  "microphone_model": {
+    "description": "High-quality mic model with low-pass filtering.",
+    "frequency_response": "mic_models/high_quality_response.txt",
+    "sampling_rate": 16000,
+    "noise_floor": -85
+  }
+}

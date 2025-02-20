@@ -1,0 +1,44 @@
+{
+  "description": "Config 10: Open hall [18, 12, 6] with 5 mics, RT60 1.2, ideal mic model, and mixed noise sources.",
+  "room": {
+    "dimensions": [18, 12, 6],
+    "rt60": 1.2,
+    "ir_file": null
+  },
+  "microphone_positions": [
+    [14, 8, 3],
+    [14, 8.5, 3],
+    [14, 9, 3],
+    [14, 9.5, 3],
+    [14, 10, 3]
+  ],
+  "sources": {
+    "speech": {
+      "description": "Speech source near the front left.",
+      "position": [4, 4, 3],
+      "signal_file": "samples/speech.wav",
+      "delay": 0.3
+    },
+    "noise": [
+      {
+        "description": "Music noise source.",
+        "type": "music",
+        "position": [8, 11, 3],
+        "signal_file": "samples/music.wav",
+        "amplitude": 0.85
+      },
+      {
+        "description": "Gaussian noise source.",
+        "type": "gaussian",
+        "position": [16, 4, 3],
+        "amplitude": 0.35
+      }
+    ]
+  },
+  "microphone_model": {
+    "description": "Ideal mic with flat frequency response.",
+    "frequency_response": "mic_models/freq_response.txt",
+    "sampling_rate": 16000,
+    "noise_floor": -90
+  }
+}

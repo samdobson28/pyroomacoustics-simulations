@@ -1,0 +1,36 @@
+{
+    "description": "Config 1: Small room [6, 5, 3] with 2 mics, RT60 0.4, ideal mic model, and with no music.",
+    "room": {
+      "dimensions": [6, 5, 3],
+      "rt60": 0.4,
+      "ir_file": null
+    },
+    "microphone_positions": [
+      [4, 2.5, 1.5],
+      [4, 3.0, 1.5]
+    ],
+    "sources": {
+      "speech": {
+        "description": "Speech source near lower left.",
+        "position": [2, 2.5, 1.5],
+        "signal_file": "samples/speech.wav",
+        "delay": 0.3
+      },
+      "noise": [
+        {
+          "description": "Music noise source.",
+          "type": "music",
+          "position": [3, 4, 1.5],
+          "signal_file": "samples/music.wav",
+          "amplitude": 0
+        }
+      ]
+    },
+    "microphone_model": {
+      "description": "Ideal mic with flat frequency response.",
+      "frequency_response": "mic_models/freq_response.txt",
+      "sampling_rate": 16000,
+      "noise_floor": -90
+    }
+  }
+  

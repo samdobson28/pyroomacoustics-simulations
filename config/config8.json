@@ -1,0 +1,45 @@
+{
+  "description": "Config 8: Wide room [14, 9, 3.2] with 6 mics, RT60 0.8, ideal mic model, with both music and low amp Gaussian noise.",
+  "room": {
+    "dimensions": [14, 9, 3.2],
+    "rt60": 0.8,
+    "ir_file": null
+  },
+  "microphone_positions": [
+    [10, 3, 1.6],
+    [10, 4, 1.6],
+    [10, 5, 1.6],
+    [10, 6, 1.6],
+    [10, 7, 1.6],
+    [10, 8, 1.6]
+  ],
+  "sources": {
+    "speech": {
+      "description": "Speech source positioned toward the left-center.",
+      "position": [3, 4.5, 1.6],
+      "signal_file": "samples/speech.wav",
+      "delay": 0.35
+    },
+    "noise": [
+      {
+        "description": "Music noise source.",
+        "type": "music",
+        "position": [7, 8, 1.6],
+        "signal_file": "samples/music.wav",
+        "amplitude": 0.65
+      },
+      {
+        "description": "Gaussian noise source.",
+        "type": "gaussian",
+        "position": [12, 2, 1.6],
+        "amplitude": 0.01
+      }
+    ]
+  },
+  "microphone_model": {
+    "description": "Ideal mic with flat frequency response.",
+    "frequency_response": "mic_models/freq_response.txt",
+    "sampling_rate": 16000,
+    "noise_floor": -90
+  }
+}

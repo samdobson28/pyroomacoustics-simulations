@@ -1,0 +1,36 @@
+{
+  "description": "Config 6: Square room [10, 10, 3.5] with 4 mics, RT60 0.55, ideal mic model, and a Gaussian noise source.",
+  "room": {
+    "dimensions": [10, 10, 3.5],
+    "rt60": 0.55,
+    "ir_file": null
+  },
+  "microphone_positions": [
+    [6, 6, 1.75],
+    [6, 4, 1.75],
+    [4, 6, 1.75],
+    [4, 4, 1.75]
+  ],
+  "sources": {
+    "speech": {
+      "description": "Speech source in the lower left corner.",
+      "position": [2, 2, 1.75],
+      "signal_file": "samples/speech.wav",
+      "delay": 0.3
+    },
+    "noise": [
+      {
+        "description": "Gaussian noise source.",
+        "type": "gaussian",
+        "position": [8, 8, 1.75],
+        "amplitude": 0.4
+      }
+    ]
+  },
+  "microphone_model": {
+    "description": "Ideal mic with flat frequency response.",
+    "frequency_response": "mic_models/freq_response.txt",
+    "sampling_rate": 16000,
+    "noise_floor": -90
+  }
+}
