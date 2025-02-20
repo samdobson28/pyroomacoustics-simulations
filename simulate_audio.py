@@ -1,170 +1,211 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """
 simulate_audio.py
-
-This script simulates synthetic room acoustics on a dry speech signal using the Pyroomacoustics library.
-It processes an input WAV file (speech1.wav) and outputs several WAV files corresponding to different
-room and microphone configurations. In this example, we simulate five different rooms, each with five microphones.
-
-Output files are saved in the subfolder:
-    speech1-modified/
-with filenames following the convention:
-    speech1-roomX-micY.wav
-where X is the room number (1-5) and Y is the microphone number (1-5).
-
-Dependencies:
-    - numpy
-    - scipy
-    - pyroomacoustics
-
+A comprehensive simulation script that:
+  - Reads a scenario from a JSON configuration file.
+  - Sets up a room simulation using pyroomacoustics (via dimensions & RT60 or using a pre‐computed IR).
+  - Adds a speech source and noise sources (music and Gaussian noise).
+  - Applies a microphone model (frequency response filtering and noise floor).
+  - Writes the multi-channel output to a WAV file in the output/ directory.
 Usage:
-    Place speech1.wav in the same directory as this script and run:
-        python simulate_audio.py
+    python simulate_audio.py --config config/scenario_basic.json --output output/basic_output.wav
 """
 
 import os
+import json
+import argparse
 import numpy as np
 import pyroomacoustics as pra
 from scipy.io import wavfile
+from scipy.signal import fftconvolve, resample
 
-def simulate_audio_in_rooms(audio_signal, sampling_rate, rooms, source_position):
+def load_audio(filepath, target_fs=None):
+    """Load an audio file as a mono normalized float32 signal, and optionally resample it."""
+    fs, data = wavfile.read(filepath)
+    if data.ndim > 1:
+        data = data[:, 0]  # take first channel if stereo
+    if np.issubdtype(data.dtype, np.integer):
+        max_val = np.iinfo(data.dtype).max
+        data = data.astype(np.float32) / max_val
+    if target_fs is not None and fs != target_fs:
+        num_samples = int(len(data) * target_fs / fs)
+        data = resample(data, num_samples)
+        fs = target_fs
+    return fs, data
+
+def load_frequency_response(filepath, target_length=None):
+    """Load a microphone frequency response (as an impulse response) from a text file."""
+    response = np.loadtxt(filepath)
+    if target_length is not None:
+        if len(response) < target_length:
+            response = np.pad(response, (0, target_length - len(response)), 'constant')
+        else:
+            response = response[:target_length]
+    return response
+
+def simulate_room(config):
     """
-    Simulates audio in multiple rooms with specified microphone positions.
-    
-    Parameters:
-        audio_signal (np.ndarray): The dry input speech signal (mono).
-        sampling_rate (int): Sampling rate of the audio signal.
-        rooms (list): List of dictionaries, each containing:
-            - 'dimensions': list of room dimensions [length, width, height] in meters.
-            - 'rt60': Desired reverberation time (seconds).
-            - 'microphones': List of microphone positions (each a list [x, y, z]).
-        source_position (list): The [x, y, z] position of the audio source.
-        
+    Set up and simulate the room based on the JSON configuration.
     Returns:
-        dict: Keys as 'room_X_mic_Y', values as the simulated microphone signals.
+      - mixed_signals: numpy array (n_mics x n_samples) with final microphone signals.
+      - room: the pyroomacoustics Room object.
     """
-    simulated_signals = {}
+    # Room configuration
+    room_cfg = config.get("room", {})
+    dimensions = room_cfg.get("dimensions", None)
+    rt60 = room_cfg.get("rt60", None)
+    ir_file = room_cfg.get("ir_file", None)
+    fs = config.get("microphone_model", {}).get("sampling_rate", 16000)
     
-    for i, room_info in enumerate(rooms):
-        room_dim = room_info['dimensions']
-        rt60 = room_info['rt60']
-        mic_positions = room_info['microphones']
-        
-        # Calculate the energy absorption coefficient and max order using Sabine's formula.
-        e_absorption, max_order = pra.inverse_sabine(rt60, room_dim)
-        
-        # Create a shoebox room using the specified dimensions and acoustics parameters.
-        room = pra.ShoeBox(
-            room_dim,
-            fs=sampling_rate,
-            materials=pra.Material(e_absorption),
-            max_order=max_order
-        )
-        
-        # Add the source signal at the given position.
-        room.add_source(source_position, signal=audio_signal)
-        
-        # Create the microphone array.
-        # The MicrophoneArray expects a 2D array where each column corresponds to a mic position.
-        mic_array = np.array(mic_positions).T
-        room.add_microphone_array(pra.MicrophoneArray(mic_array, room.fs))
-        
-        # Run the room simulation (i.e. convolve the source signal with the room impulse responses).
-        room.simulate()
-        
-        # Store simulated signals for each microphone.
-        for j, mic_signal in enumerate(room.mic_array.signals):
-            key = f'room_{i+1}_mic_{j+1}'
-            simulated_signals[key] = mic_signal
+    if dimensions is None:
+        raise ValueError("Room dimensions must be provided.")
+    if rt60 is None and ir_file is None:
+        raise ValueError("Either rt60 or an impulse response file must be provided.")
 
-    return simulated_signals
+    # Create room using dimensions+RT60 (for a precomputed IR, you’d extend this code)
+    if rt60 is not None:
+        e_absorption, max_order = pra.inverse_sabine(rt60, dimensions)
+        materials = pra.Material(e_absorption)
+    else:
+        materials = None
+        max_order = 0
+
+    room = pra.ShoeBox(dimensions, fs=fs, materials=materials, max_order=max_order)
+
+    # Microphone positions
+    mic_positions = config.get("microphone_positions", [])
+    if not mic_positions:
+        raise ValueError("No microphone positions specified.")
+    mic_array = np.array(mic_positions).T  # shape (ndim, n_mics)
+    room.add_microphone_array(mic_array)
+
+    # Add sources
+    sources_cfg = config.get("sources", {})
+
+    # Speech source
+    speech_cfg = sources_cfg.get("speech", None)
+    if speech_cfg is None:
+        raise ValueError("A speech source must be specified.")
+    speech_pos = speech_cfg.get("position", None)
+    speech_file = speech_cfg.get("signal_file", None)
+    if speech_pos is None or speech_file is None:
+        raise ValueError("Speech source must include 'position' and 'signal_file'.")
+    fs_speech, speech_signal = load_audio(speech_file, target_fs=fs)
+    delay = speech_cfg.get("delay", 0.0)
+    room.add_source(speech_pos, signal=speech_signal, delay=delay)
+
+    # Noise sources (list)
+    noise_sources = sources_cfg.get("noise", [])
+    for noise in noise_sources:
+        noise_type = noise.get("type", "").lower()
+        noise_pos = noise.get("position", None)
+        amplitude = noise.get("amplitude", 1.0)
+        if noise_pos is None or noise_type == "":
+            raise ValueError("Each noise source must have a 'type' and 'position'.")
+        if noise_type == "music":
+            noise_file = noise.get("signal_file", None)
+            if noise_file is None:
+                raise ValueError("Music noise source must specify 'signal_file'.")
+            fs_noise, noise_signal = load_audio(noise_file, target_fs=fs)
+            noise_signal = amplitude * noise_signal
+            room.add_source(noise_pos, signal=noise_signal, delay=0.0)
+        elif noise_type == "gaussian":
+            signal_length = len(speech_signal)
+            noise_signal = amplitude * np.random.randn(signal_length)
+            room.add_source(noise_pos, signal=noise_signal, delay=0.0)
+        else:
+            raise ValueError(f"Unknown noise source type: {noise_type}")
+
+    # Simulate the room and return individual contributions (premix)
+    premix = room.simulate(return_premix=True)
+    mixed_signals = np.sum(premix, axis=0)
+    return mixed_signals, room
+
+def apply_microphone_model(signals, mic_model_cfg):
+    """
+    Apply the microphone model to the simulated signals:
+      - Convolve with a frequency response if provided.
+      - Add a noise floor.
+    """
+    processed = signals.copy()
+    fs = mic_model_cfg.get("sampling_rate", None)
+    noise_floor_db = mic_model_cfg.get("noise_floor", None)
+    freq_resp_file = mic_model_cfg.get("frequency_response", None)
+
+    if freq_resp_file is not None:
+        freq_resp = load_frequency_response(freq_resp_file)
+        for i in range(processed.shape[0]):
+            processed[i, :] = fftconvolve(processed[i, :], freq_resp, mode='same')
+
+    if noise_floor_db is not None:
+        noise_std = 10 ** (noise_floor_db / 20.0)
+        noise = noise_std * np.random.randn(*processed.shape)
+        processed += noise
+
+    return processed
+
+def write_output(signals, fs, output_file):
+    """
+    Write the multi-channel signal to a WAV file.
+    The output file is saved in the directory specified (typically under output/).
+    """
+    # Ensure output directory exists.
+    output_dir = os.path.dirname(output_file)
+    if output_dir and not os.path.exists(output_dir):
+        os.makedirs(output_dir, exist_ok=True)
+    out = signals.T  # shape (n_samples, n_mics)
+    max_val = np.max(np.abs(out))
+    if max_val > 0:
+        out = out / max_val
+    out_int16 = np.int16(out * 32767)
+    wavfile.write(output_file, fs, out_int16)
+    print(f"Simulated output written to: {output_file}")
 
 def main():
-    # Input file (dry speech signal)
-    input_file = 'speech1.wav'
-    sampling_rate, audio_signal = wavfile.read(input_file)
-    
-    # Convert to mono if stereo
-    if audio_signal.ndim > 1 and audio_signal.shape[1] > 1:
-        audio_signal = np.mean(audio_signal, axis=1)
-    
-    # Define five room configurations, each with five microphones.
-    rooms = [
-        {
-            'dimensions': [9, 7.5, 3.5],
-            'rt60': 0.5,
-            'microphones': [
-                [2.0, 3.0, 1.5],
-                [3.0, 3.0, 1.5],
-                [4.0, 3.0, 1.5],
-                [5.0, 3.0, 1.5],
-                [6.0, 3.0, 1.5]
-            ]
-        },
-        {
-            'dimensions': [8, 6, 3.0],
-            'rt60': 0.6,
-            'microphones': [
-                [2.0, 2.0, 1.5],
-                [3.0, 2.0, 1.5],
-                [4.0, 2.0, 1.5],
-                [5.0, 2.0, 1.5],
-                [6.0, 2.0, 1.5]
-            ]
-        },
-        {
-            'dimensions': [10, 8, 3.5],
-            'rt60': 0.7,
-            'microphones': [
-                [2.0, 4.0, 1.5],
-                [3.0, 4.0, 1.5],
-                [4.0, 4.0, 1.5],
-                [5.0, 4.0, 1.5],
-                [6.0, 4.0, 1.5]
-            ]
-        },
-        {
-            'dimensions': [7, 5, 3.0],
-            'rt60': 0.5,
-            'microphones': [
-                [1.0, 1.0, 1.2],
-                [2.0, 1.0, 1.2],
-                [3.0, 1.0, 1.2],
-                [4.0, 1.0, 1.2],
-                [5.0, 1.0, 1.2]
-            ]
-        },
-        {
-            'dimensions': [6, 6, 3.0],
-            'rt60': 0.8,
-            'microphones': [
-                [1.5, 2.0, 1.2],
-                [2.5, 2.0, 1.2],
-                [3.5, 2.0, 1.2],
-                [4.5, 2.0, 1.2],
-                [5.5, 2.0, 1.2]
-            ]
-        }
-    ]
-    
-    # Define a common source position (ensure this is within the boundaries of all rooms).
-    source_position = [2.5, 3.73, 1.76]
-    
-    # Run simulation
-    simulated_signals = simulate_audio_in_rooms(audio_signal, sampling_rate, rooms, source_position)
-    
-    # Define the output folder.
-    output_folder = 'speech1-modified'
-    os.makedirs(output_folder, exist_ok=True)
-    
-    # Save each output with the naming convention: speech1-roomX-micY.wav inside the output folder.
-    for key, signal in simulated_signals.items():
-        parts = key.split('_')
-        room_num = parts[1]
-        mic_num = parts[3]
-        output_filename = os.path.join(output_folder, f'speech1-room{room_num}-mic{mic_num}.wav')
-        wavfile.write(output_filename, sampling_rate, signal.astype(np.int16))
-        print(f"Saved: {output_filename}")
+    parser = argparse.ArgumentParser(
+        description="Simulate audio scenarios using pyroomacoustics based on a JSON configuration."
+    )
+    parser.add_argument("--config", type=str, required=True,
+                        help="Path to the JSON configuration file (e.g., config/scenario_basic.json).")
+    parser.add_argument("--output", type=str, default="output/simulated_output.wav",
+                        help="Path for the output WAV file (e.g., output/basic_output.wav).")
+    args = parser.parse_args()
+
+    with open(args.config, "r") as f:
+        config = json.load(f)
+
+    print("Simulating room acoustics...")
+    signals, room = simulate_room(config)
+    fs = room.fs
+
+    mic_model_cfg = config.get("microphone_model", None)
+    if mic_model_cfg is not None:
+        print("Applying microphone model processing...")
+        signals = apply_microphone_model(signals, mic_model_cfg)
+
+    write_output(signals, fs, args.output)
+
+    # (Optional) Plotting
+    import matplotlib.pyplot as plt
+    if hasattr(room, "rir"):
+        rir = room.rir[0][0]
+        plt.figure()
+        plt.plot(np.arange(len(rir)) / fs, rir)
+        plt.title("Room Impulse Response (Mic 0, Source 0)")
+        plt.xlabel("Time [s]")
+        plt.ylabel("Amplitude")
+        plt.show()
+
+    n_mics = signals.shape[0]
+    plt.figure(figsize=(10, 2 * n_mics))
+    for i in range(n_mics):
+        plt.subplot(n_mics, 1, i + 1)
+        plt.plot(np.arange(signals.shape[1]) / fs, signals[i, :])
+        plt.title(f"Microphone {i} Signal")
+        plt.xlabel("Time [s]")
+        plt.ylabel("Amplitude")
+    plt.tight_layout()
+    plt.show()
 
 if __name__ == "__main__":
     main()
