@@ -23,13 +23,13 @@ This package implements a comprehensive simulation framework for room acoustics 
 project_root/
 ├── simulate_audio.py
 ├── config/
-│ ├── scenario_basic.json
-│ ├── scenario_precomputed_ir.json
-│ └── scenario_complex.json
+│ ├── config1.json
+│ ├── config2.json
+│ └── config3.json
+│ └── ...
 ├── samples/
 │ ├── speech.wav # A mono speech recording sample.
 │ ├── music.wav # A music sample to be used as a noise source.
-│ └── background_music.wav # An alternative music file (if you wish to simulate different noise environments).
 ├── mic_models/
 │ ├── freq_response.txt # A flat, ideal frequency response (e.g., 10 taps).
 │ ├── high_quality_response.txt # A 21-tap low-pass filter response (simulating a high-quality mic).
