@@ -19,7 +19,7 @@ This package implements a comprehensive simulation framework for room acoustics 
 ---
 
 ## Directory Structure
-
+```bash
 project_root/
 ├── simulate_audio.py
 ├── config/
@@ -38,7 +38,7 @@ project_root/
 │ └── room_ir.wav # A precomputed room impulse response file (if used).
 └── output/
 └── (Simulated output WAV files will be saved here)
-
+```
 ---
 
 ## Setup and Requirements
