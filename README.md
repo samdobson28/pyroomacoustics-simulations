@@ -12,7 +12,7 @@ This package implements a comprehensive framework for simulating room acoustics 
 
    **Configuration:**
 
-   - Config files such as `config11.json` and `config12.json` use this mode.
+   - Config files `config12.json` through `config15.json` use this mode.
    - In these config files, the `"room"` section should set `"dimensions"` and `"rt60"` to `null` and specify the `"ir_file"` path (e.g., `"ir/RVB2014_type2_rir_simroom1_near_angla.wav"`).
    - The simulation will load the precomputed IR and convolve it with the speech (and noise) signals.
 
@@ -20,7 +20,7 @@ This package implements a comprehensive framework for simulating room acoustics 
    In this mode, the simulation generates the room impulse response on the fly using PyroomAcoustics.
    - You specify the room dimensions and a desired reverberation time (`rt60`) in the config file.
    - This mode also supports the inclusion of music and Gaussian noise sources.
-   - Config files such as `config1.json` through `config10.json` use this mode.
+   - Config files such as `config1.json` through `config11.json` use this mode.
 
 ---
 
@@ -52,7 +52,7 @@ project_root/
 │   └── standard_response.txt
 └── output/               # Simulated output WAV files will be saved here.
 ```
-````
+
 
 ---
 
