@@ -1,8 +1,3 @@
-Below is an updated README in Markdown format. You can copy and paste it into your README.md file and adjust as needed.
-
----
-
-````markdown
 # Audio Simulation Package
 
 This package implements a comprehensive framework for simulating room acoustics and audio recording scenarios. It supports two modes for applying room impulse responses (RIRs) to speech and noise signals:
@@ -143,9 +138,5 @@ pip install numpy scipy pyroomacoustics matplotlib
 
 For questions or contributions, please contact Sam Dobson, sed2191@columbia.edu.
 
-```
-
 ---
 
-This updated README emphasizes the two RIR modes, explains the corresponding config files, and provides clear usage instructions. Let me know if you need any further modifications!
-```
