@@ -2,7 +2,7 @@
 """
 analyze.py
 
-This script processes each WAV file in the 'speech1-modified' folder,
+This script processes each WAV file in the 'output' folder,
 generates a spectrogram, waveform, cepstrum, and MFCC plot for each file, and saves
 the images in the 'spectrograms', 'waveforms', 'cepstrums', and 'mfccs' folders respectively.
 
@@ -15,7 +15,7 @@ Dependencies:
     - os
 
 Usage:
-    Ensure that the 'speech1-modified' folder (containing the simulated WAV files)
+    Ensure that the 'output' folder (containing the simulated WAV files)
     exists in the same directory, then run:
         python spectrogram.py
 """
@@ -105,7 +105,7 @@ def plot_and_save_mfcc(signal, sampling_rate, title, output_filename, n_mfcc=13)
 ### 🟢 MAIN FUNCTION
 
 def main():
-    input_folder = 'speech1-modified'
+    input_folder = 'output'
     spectrogram_folder = 'spectrograms'
     waveform_folder = 'waveforms'
     cepstrum_folder = 'cepstrums'

@@ -1,27 +1,31 @@
+Below is an updated README in Markdown format. You can copy and paste it into your README.md file and adjust as needed.
+
+---
+
+````markdown
 # Audio Simulation Package
 
-This package implements a comprehensive simulation framework for room acoustics and audio recording scenarios. It supports advanced research requirements by allowing you to define scenarios using JSON files that specify:
+This package implements a comprehensive framework for simulating room acoustics and audio recording scenarios. It supports two modes for applying room impulse responses (RIRs) to speech and noise signals:
 
-- **Room Parameters:** Define the room dimensions along with a desired reverberation time (RT60) _or_ provide a precomputed impulse response (IR) file.
-- **Microphone Array:** Specify the positions of one or more microphones.
-- **Sources:**
-  - **Speech Source:** A primary speech signal with its position, file path, and delay.
-  - **Noise Sources:** Supports both music noise (via an audio file) and Gaussian noise with a specified amplitude.
-- **Microphone Model:** Defines a frequency response (FIR filter), sampling rate, and noise floor to simulate real-world microphone characteristics.
+1. **Precomputed RIR Mode**  
+   In this mode, the simulation uses precomputed impulse responses (IRs) located in the `ir/` folder. These IRs are “narrow impulse” responses (i.e. high-energy, short-duration events that capture the room's acoustic characteristics) sourced from the [OpenSLR #28 dataset](https://www.openslr.org/28/). The precomputed IR files currently available are:
 
-## Simulation Process
+   - `RVB2014_type2_rir_simroom1_near_angla.wav`
+   - `RWCP_type4_rir_p30r.wav`
+   - `RWCP_type2_rir_cirline_ofc_imp090.wav`
+   - `air_type1_air_binaural_stairway_1_2_60.wav`
 
-- **Room Setup:**  
-  The simulation generates room impulse responses (RIRs) using Pyroomacoustics (via the image source model) based on provided dimensions and RT60 or a precomputed IR file.
-  
-- **Source Simulation:**  
-  Each source (speech and noise) is simulated individually. For music noise sources, if the signal is longer than the speech, it is clipped to match the speech duration.
-  
-- **Signal Processing:**  
-  The simulated room signals are processed by applying the microphone model (convolution with a frequency response and addition of a noise floor).
-  
-- **Output:**  
-  The final multi-channel output is written to a WAV file with descriptive naming.
+   **Configuration:**
+
+   - Config files such as `config11.json` and `config12.json` use this mode.
+   - In these config files, the `"room"` section should set `"dimensions"` and `"rt60"` to `null` and specify the `"ir_file"` path (e.g., `"ir/RVB2014_type2_rir_simroom1_near_angla.wav"`).
+   - The simulation will load the precomputed IR and convolve it with the speech (and noise) signals.
+
+2. **PyroomAcoustics Simulated RIR Mode**  
+   In this mode, the simulation generates the room impulse response on the fly using PyroomAcoustics.
+   - You specify the room dimensions and a desired reverberation time (`rt60`) in the config file.
+   - This mode also supports the inclusion of music and Gaussian noise sources.
+   - Config files such as `config1.json` through `config10.json` use this mode.
 
 ---
 
@@ -30,38 +34,104 @@ This package implements a comprehensive simulation framework for room acoustics 
 ```bash
 project_root/
 ├── simulate_audio.py      # Module for simulating a single configuration.
-├── simulate_all.py        # Script to iterate over all config files.
+├── simulate_all.py        # Script that iterates over all config files.
+├── analyze.py             # (Optional) Module for analyzing simulation outputs.
 ├── config/                # JSON configuration files for different scenarios.
-│   ├── config1.json
+│   ├── config1.json       # Example: Simulated RIR via PyroomAcoustics.
 │   ├── config2.json
-│   ├── config3.json
 │   ├── ...
-│   └── config10.json
-├── samples/
-│   ├── speech.wav         # A mono speech recording sample.
-│   └── music.wav          # A music sample for the noise source.
-├── mic_models/
-│   ├── freq_response.txt  # Flat, ideal frequency response (e.g., 10 taps).
-│   ├── high_quality_response.txt  # 21-tap low-pass filter response.
-│   └── standard_response.txt        # 11-tap smoothing filter response.
-├── ir/                   # Folder for precomputed impulse response files.
-│   └── room_ir.wav       # Example precomputed room impulse response.
+│   ├── config10.json
+│   ├── config11.json      # Example: Precomputed RIR mode.
+│   └── config12.json      # Example: Precomputed RIR mode.
+├── ir/                   # Precomputed impulse response (IR) files.
+│   ├── RVB2014_type2_rir_simroom1_near_angla.wav
+│   ├── RWCP_type4_rir_p30r.wav
+│   ├── RWCP_type2_rir_cirline_ofc_imp090.wav
+│   └── air_type1_air_binaural_stairway_1_2_60.wav
+├── samples/              # Audio samples for sources.
+│   ├── speech1.wav        # A sample speech file.
+│   └── music.wav          # A sample music noise file.
+├── mic_models/           # Microphone model files (frequency responses).
+│   ├── freq_response.txt
+│   ├── high_quality_response.txt
+│   └── standard_response.txt
 └── output/               # Simulated output WAV files will be saved here.
 ```
+````
 
 ---
 
-## Setup and Requirements
+## Usage
 
-- **Python 3.x**
+### Single Configuration Simulation
 
-- **Dependencies:**
-  - numpy
-  - scipy
-  - pyroomacoustics
-  - matplotlib
+Run a single simulation using a specific configuration file:
 
-Install these dependencies using:
+```bash
+python simulate_audio.py --config config/config1.json --output output/config1_output.wav
+```
+
+- **Input:** A JSON config file (e.g., `config/config1.json`).
+- **Output:** A multi-channel WAV file with the simulated, convolved audio saved in the `output/` folder.
+
+### Batch Simulation
+
+Simulate all scenarios in the `config/` folder with a specified speech file:
+
+```bash
+python simulate_all.py samples/speech1.wav
+```
+
+- **Input:** A speech file (e.g., `samples/speech1.wav`) that overrides the speech file specified in each config.
+- **Output:** WAV files named `<speechName>-<configName>-out.wav` saved in the `output/` folder.
+
+---
+
+## RIR Options
+
+### Precomputed RIRs
+
+- **Location:** `ir/` folder.
+- **Files:**
+  - `RVB2014_type2_rir_simroom1_near_angla.wav`
+  - `RWCP_type4_rir_p30r.wav`
+  - `RWCP_type2_rir_cirline_ofc_imp090.wav`
+  - `air_type1_air_binaural_stairway_1_2_60.wav`
+- **Usage:**  
+  Configure the `"room"` section in your JSON as follows:
+  ```json
+  "room": {
+    "dimensions": null,
+    "rt60": null,
+    "ir_file": "ir/RVB2014_type2_rir_simroom1_near_angla.wav"
+  }
+  ```
+  This mode uses a precomputed, narrow impulse response (a “one-click” IR) from the OpenSLR #28 dataset. The IR is convolved with the entire speech (and noise) signal to simulate the room acoustics.
+
+### PyroomAcoustics Simulated RIRs
+
+- **Usage:**  
+  Configure the `"room"` section with the room dimensions and desired `rt60`:
+  ```json
+  "room": {
+    "dimensions": [6, 5, 3],
+    "rt60": 0.4,
+    "ir_file": null
+  }
+  ```
+  In this mode, PyroomAcoustics generates the RIR based on the specified dimensions and reverberation time. This mode also supports additional music or Gaussian noise sources.
+
+---
+
+## Dependencies
+
+- Python 3.x
+- numpy
+- scipy
+- pyroomacoustics
+- matplotlib (for any analysis/visualization)
+
+Install the dependencies with:
 
 ```bash
 pip install numpy scipy pyroomacoustics matplotlib
@@ -69,121 +139,13 @@ pip install numpy scipy pyroomacoustics matplotlib
 
 ---
 
-## Running the Simulation
+## Contact
 
-There are two primary ways to run the simulation:
+For questions or contributions, please contact Sam Dobson, sed2191@columbia.edu.
 
-### 1. Single Configuration
-
-To run a single scenario using the `simulate_audio.py` module, use:
-
-```bash
-python simulate_audio.py --config config/config1.json --output output/config1_output.wav
 ```
-
-This command will:
-- Load settings from `config1.json`.
-- Set up the room (using dimensions and RT60, or a precomputed IR if specified).
-- Simulate the speech and noise sources.
-- Apply the microphone model.
-- Save the final multi-channel output to `output/config1_output.wav`.
-
-### 2. Multiple Configurations
-
-The script `simulate_all.py` iterates over all JSON configuration files in the `config/` folder (now including 10 configurations). You can run it as follows:
-
-```bash
-python simulate_all.py samples/speech.wav
-```
-
-This will:
-- Override the speech file in each configuration with the provided `samples/speech.wav`.
-- Simulate each scenario (from `config1.json` to `config10.json`).
-- Write the output files to the `output/` folder with descriptive filenames.
 
 ---
 
-## Sample Files and Microphone Model Files
-
-### Audio Samples (`samples/` folder)
-
-- **speech.wav:**  
-  A mono speech recording sample (e.g., from TIMIT or CMU Arctic).
-- **music.wav:**  
-  A music sample for the noise source.
-
-### Microphone Models (`mic_models/` folder)
-
-- **freq_response.txt:** (Ideal, flat response; 10 taps)
-
-      1.0
-      0.0
-      0.0
-      0.0
-      0.0
-      0.0
-      0.0
-      0.0
-      0.0
-      0.0
-
-- **high_quality_response.txt:** (21-tap symmetric low-pass filter)
-
-      0.01
-      0.02
-      0.04
-      0.08
-      0.12
-      0.16
-      0.20
-      0.22
-      0.24
-      0.26
-      0.28
-      0.26
-      0.24
-      0.22
-      0.20
-      0.16
-      0.12
-      0.08
-      0.04
-      0.02
-      0.01
-
-- **standard_response.txt:** (11-tap smoothing filter)
-
-      0.05
-      0.10
-      0.15
-      0.20
-      0.25
-      0.30
-      0.25
-      0.20
-      0.15
-      0.10
-      0.05
-
-### Precomputed IR File (`ir/` folder)
-
-- **room_ir.wav:**  
-  An example impulse response file. You can obtain free IR files from:
-  - [Waves IR Convolution Reverb Library](https://www.waves.com/downloads/ir-convolution-reverb-library)
-  - [RoyJames/room-impulse-responses on GitHub](https://github.com/RoyJames/room-impulse-responses)
-
----
-
-## Additional Information
-
-- **Advanced Simulation:**  
-  You can extend the microphone model section with additional parameters (e.g., directional patterns, sensitivity) as required by your research.
-  
-- **Research Context:**  
-  This framework simulates realistic acoustic environments by incorporating room acoustics, spatial noise sources, and advanced microphone characteristics—ideal for advanced research projects in acoustics and audio processing.
-
-- **License:**  
-  Specify your chosen license here (e.g., MIT License).
-
-- **Contact and Contribution:**  
-  For questions or contributions, please contact Sam Dobson.
+This updated README emphasizes the two RIR modes, explains the corresponding config files, and provides clear usage instructions. Let me know if you need any further modifications!
+```

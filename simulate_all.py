@@ -64,7 +64,9 @@ def main():
 
         # Create output filename: <speechName>-<configName>-out.wav.
         output_filename = os.path.join("output", f"{speech_name}-{config_name}-out.wav")
-        write_output(signals, room.fs, output_filename)
+        # Use room.fs if available; if room is None (precomputed IR mode), use the sampling rate from mic_model.
+        fs = room.fs if room is not None else config.get("microphone_model", {}).get("sampling_rate", 16000)
+        write_output(signals, fs, output_filename)
         print(f"Simulation complete: {output_filename}\n")
 
 if __name__ == "__main__":
